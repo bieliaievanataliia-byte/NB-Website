@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notizen → PDF</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand-dark:  #1A2742;
+      --brand-mid:   #2E6DA4;
+      --brand-light: #E8F1FA;
+      --accent:      #F0A500;
+      --text:        #1C1C1E;
+      --muted:       #6B7280;
+      --bg:          #F5F7FA;
+      --white:       #FFFFFF;
+      --radius:      12px;
+      --shadow:      0 4px 24px rgba(26,39,66,.10);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+    header {
+      background: var(--brand-dark);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      width: 42px; height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    header h1 { color: #fff; font-size: 1.25rem; font-weight: 700; }
+    header p  { color: #7BA7CC; font-size: 0.85rem; margin-top: 2px; }
+
+    .status-pill {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 7px;
+      font-size: 0.78rem; color: #7BA7CC;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted);
+      transition: background .3s;
+    }
+    .dot.online  { background: #34D399; }
+    .dot.offline { background: #F87171; }
+
+    /* ── Layout ──────────────────────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 36px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Karten ──────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid #EEF1F6;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-head h2 { font-size: 0.95rem; font-weight: 700; color: var(--brand-dark); }
+    .card-head .icon { font-size: 1.1rem; }
+    .card-body { padding: 20px; }
+
+    /* ── Notiztyp-Auswahl ─────────────────────────────── */
+    .typ-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .typ-btn {
+      padding: 8px 6px;
+      border: 1.5px solid #DDE3EE;
+      border-radius: 8px;
+      background: #FAFBFD;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+      transition: all .15s;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .typ-btn .typ-icon { font-size: 1.2rem; }
+    .typ-btn:hover { border-color: var(--brand-mid); color: var(--brand-dark); background: var(--brand-light); }
+    .typ-btn.active {
+      border-color: var(--brand-mid);
+      background: var(--brand-light);
+      color: var(--brand-dark);
+      font-weight: 600;
+      box-shadow: 0 0 0 3px rgba(46,109,164,.12);
+    }
+
+    /* ── Eingabe ──────────────────────────────────────── */
+    textarea {
+      width: 100%;
+      height: 300px;
+      border: 1.5px solid #DDE3EE;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+      background: #FAFBFD;
+    }
+    textarea:focus { border-color: var(--brand-mid); background: #fff; }
+    textarea::placeholder { color: #B0BAC9; }
+
+    .row {
+      display: flex; gap: 10px; margin-top: 12px; align-items: center;
+    }
+
+    /* ── Buttons ──────────────────────────────────────── */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-primary  { background: var(--brand-mid);  color: #fff; }
+    .btn-accent   { background: var(--accent);      color: #fff; }
+    .btn-ghost    { background: var(--brand-light); color: var(--brand-dark); }
+
+    /* ── Vorschau ──────────────────────────────────────── */
+    #vorschau {
+      height: 360px;
+      overflow-y: auto;
+      background: #FAFBFD;
+      border: 1.5px dashed #DDE3EE;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    #vorschau.filled {
+      border-style: solid;
+      border-color: #DDE3EE;
+      color: var(--text);
+    }
+
+    .preview-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; gap: 12px; text-align: center;
+    }
+    .preview-placeholder span { font-size: 2.5rem; }
+    .preview-placeholder p { font-size: 0.85rem; color: #B0BAC9; max-width: 200px; }
+
+    .pv-title   { font-size: 1.1rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 4px; }
+    .pv-meta    { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; }
+    .pv-section { margin-bottom: 14px; }
+    .pv-section h3 {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--brand-mid);
+      border-bottom: 1px solid var(--brand-light);
+      padding-bottom: 4px; margin-bottom: 8px;
+    }
+    .pv-item { display: flex; gap: 8px; margin-bottom: 4px; font-size: 0.85rem; }
+    .pv-item::before { content: "•"; color: var(--accent); flex-shrink: 0; }
+    .pv-box {
+      background: var(--brand-light);
+      border-left: 3px solid var(--accent);
+      padding: 10px 12px; border-radius: 6px;
+      font-size: 0.85rem; font-style: italic;
+      margin-bottom: 14px; line-height: 1.5;
+    }
+    .ap-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .ap-table th { background: var(--brand-mid); color: #fff; padding: 6px 8px; text-align: left; }
+    .ap-table td { padding: 5px 8px; border-bottom: 1px solid #EEF1F6; }
+    .ap-table tr:nth-child(even) td { background: var(--brand-light); }
+
+    /* ── Spinner ──────────────────────────────────────── */
+    .spinner {
+      display: none; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ──────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: #1C1C1E; color: #fff;
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 0.85rem; pointer-events: none;
+      opacity: 0; transition: opacity .3s; z-index: 999;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── Bottom-Bar ──────────────────────────────────── */
+    .bottom-bar {
+      grid-column: 1 / -1;
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .bottom-bar p { font-size: 0.85rem; color: var(--muted); }
+    .bottom-bar .hint-icon { font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📝</div>
+  <div>
+    <h1>Notizen → PDF</h1>
+    <p>Alle Notiztypen · Strukturierte Dokumente</p>
+  </div>
+  <div class="status-pill">
+    <span class="dot" id="ollama-dot"></span>
+    <span id="ollama-label">Prüfe Ollama …</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Eingabe-Karte -->
+  <div class="card">
+    <div class="card-head">
+      <span class="icon">✏️</span>
+      <h2>Deine Notizen</h2>
+    </div>
+    <div class="card-body">
+
+      <!-- Notiztyp-Auswahl -->
+      <div class="typ-grid" id="typ-grid">
+        <!-- wird per JS befüllt -->
+      </div>
+
+      <textarea id="notizen" placeholder="Schreib oder füge deine Notizen hier ein …
+
+Wähle oben einen Notiztyp — Claude erkennt automatisch Struktur, Aufgaben und wichtige Punkte."></textarea>
+
+      <div class="row">
+        <select id="model" style="flex:1;padding:10px 12px;border:1.5px solid #DDE3EE;border-radius:8px;font-size:0.88rem;color:var(--text);background:#FAFBFD;outline:none;cursor:pointer;">
+          <option value="llama3">llama3</option>
+          <option value="mistral">mistral</option>
+          <option value="llama3.2">llama3.2</option>
+          <option value="gemma2">gemma2</option>
+        </select>
+        <button class="btn btn-ghost" onclick="beispielLaden()">Beispiel</button>
+        <button class="btn btn-primary" id="btn-vorschau" onclick="vorschauErstellen()">
+          <span id="spinner-vorschau" class="spinner"></span>
+          Aufbereiten
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vorschau-Karte -->
+  <div class="card">
+    <div class="card-head">
+      <span class="icon">👁</span>
+      <h2>Strukturierte Vorschau</h2>
+    </div>
+    <div class="card-body">
+      <div id="vorschau">
+        <div class="preview-placeholder">
+          <span>📄</span>
+          <p>Wähle einen Notiztyp, gib Notizen ein und klicke „Aufbereiten"</p>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="btn btn-accent" id="btn-pdf" onclick="pdfErstellen()" disabled>
+          <span id="spinner-pdf" class="spinner"></span>
+          PDF herunterladen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom-Bar -->
+  <div class="bottom-bar">
+    <span class="hint-icon">💡</span>
+    <p>Claude analysiert deine Notizen und strukturiert sie automatisch — egal ob Meeting-Protokoll, Brainstorming, Tagebucheintrag oder Aufgabenliste.</p>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+  let aktiverTyp = "meeting";
+  let letztesDaten = null;
+
+  // ── Ollama-Status ────────────────────────────────────
+  async function checkOllama() {
+    try {
+      const r = await fetch("/ollama-status");
+      const d = await r.json();
+      const dot   = document.getElementById("ollama-dot");
+      const label = document.getElementById("ollama-label");
+      const sel   = document.getElementById("model");
+      if (d.online) {
+        dot.className = "dot online";
+        label.textContent = "Ollama online";
+        if (d.modelle.length > 0) {
+          sel.innerHTML = d.modelle.map(m => `<option value="${m}">${m}</option>`).join("");
+        }
+      } else {
+        dot.className = "dot offline";
+        label.textContent = "Ollama offline – starte: ollama serve";
+      }
+    } catch {
+      document.getElementById("ollama-label").textContent = "Status unbekannt";
+    }
+  }
+  checkOllama();
+  setInterval(checkOllama, 15000);
+
+  const BEISPIELE = {
+    meeting: `Projektmeeting Website-Relaunch
+28. Juni 2026, 10:00 Uhr, Zoom
+
+Teilnehmer: Nataliia, Thomas (Design), Sarah (Entwicklung), Marc (Marketing)
+
+Wir haben den aktuellen Stand des Website-Relaunches besprochen.
+Thomas hat neue Mockups vorgestellt – alle waren begeistert vom neuen Design.
+Sarah berichtete, dass das CMS-Setup fertig ist, aber noch Tests fehlen.
+Marc will bis nächste Woche die neuen Texte liefern.
+
+Beschlossen: Das neue Design wird so umgesetzt. Go-Live: 15. Juli 2026.
+
+Aufgaben:
+- Nataliia: Abstimmung mit Kunden bis 2. Juli
+- Thomas: Finale Design-Assets bis 5. Juli
+- Sarah: Performance-Tests bis 10. Juli
+- Marc: Texte bis 30. Juni
+
+Offene Punkte: SEO-Strategie & Hosting noch unklar.`,
+
+    brainstorming: `App-Idee: Habit Tracker für Kreative
+
+Kernidee: Eine App, die kreative Gewohnheiten trackt – nicht nur „erledigt/nicht erledigt", sondern auch Energie und Flow-Zustand.
+
+Ideen:
+- Tägliches 2-Minuten-Check-in mit Stimmungsbewertung
+- Visuelle Streak-Darstellung wie eine Kunstgalerie
+- Wöchentliche KI-Zusammenfassung der produktivsten Zeiten
+- Integration mit Spotify (Musik = Trigger für Produktivität)
+- Export als Sketchbook-PDF
+
+Chancen: Wachsender Markt für Creative-Tools, kaum Konkurrenz für dieses Nischenpublikum
+
+Risiken: Zu komplex, User-Retention schwierig, Apple-Review dauert lang
+
+Nächste Schritte: Wireframes, Nutzerinterviews, MVP definieren`,
+
+    journal: `28. Juni 2026 – Langer Tag, guter Abschluss
+
+Heute war intensiv. Morgens fühlte ich mich überfordert mit dem neuen Projekt, aber nach dem Mittagsspaziergang wurde alles klarer.
+
+Das Gespräch mit Lisa hat mir gut getan – sie erinnerte mich daran, dass ich schon viel schlimmere Deadlines überstanden habe. Manchmal braucht man einfach jemanden, der das sagt.
+
+Abends habe ich drei Stunden am Stück programmiert ohne auf die Uhr zu schauen. Das ist immer ein gutes Zeichen. Das Ergebnis ist noch nicht perfekt, aber es funktioniert.
+
+Was ich heute gelernt habe: Perfekt ist der Feind von fertig. Und: Pausen helfen.
+
+Morgen: früh anfangen, E-Mails erst nach 11 Uhr checken.`,
+
+    aufgaben: `Aufgaben für Juli – Website-Relaunch
+
+DRINGEND:
+- Kundenpräsentation vorbereiten (Deadline: Donnerstag!)
+- Server-Konfiguration prüfen – geht nicht mehr richtig
+- Fehler auf Kontaktformular fixen
+
+WICHTIG:
+- Neue Texte für About-Seite schreiben
+- Bilder optimieren (alle > 1MB komprimieren)
+- Google Analytics einrichten
+- Newsletter-Template anpassen
+
+IRGENDWANN:
+- Dark Mode implementieren
+- Blog-Bereich ausbauen
+- Testimonials-Sektion hinzufügen
+- Backup-Strategie dokumentieren`,
+
+    recherche: `Recherche: Beste Ansätze für lokale KI-Modelle 2026
+
+Quellen: Hugging Face Blog, LM Studio Docs, Ollama GitHub
+
+Erkenntnisse:
+- Ollama ist aktuell die einfachste Lösung für lokale Modelle auf macOS
+- llama3 (8B) läuft gut auf M2 mit 16GB RAM, ca. 30 Token/s
+- Mistral 7B ist besser für mehrsprachige Aufgaben (besonders Deutsch)
+- Quantisierung Q4_K_M ist guter Kompromiss zwischen Größe und Qualität
+- LM Studio hat bessere GUI, Ollama bessere API-Kompatibilität
+
+Offene Fragen:
+- Wie performt phi-3 mini im Vergleich für kurze Texte?
+- Gibt es Unterschiede bei GDPR-Konformität zwischen den Anbietern?
+- Wann lohnt sich RAG vs. Fine-tuning?`,
+
+    allgemein: `Gedanken zum neuen Büro-Setup
+
+Ich brauche eine bessere Arbeitsumgebung. Momentan sitze ich am Küchentisch und das funktioniert nicht mehr, seit das Team auf Hybrid umgestellt hat.
+
+Geplante Änderungen:
+- Höhenverstellbarer Schreibtisch (Budget: max. 400€)
+- Externes Display, mindestens 27 Zoll
+- Bessere Webcam für die vielen Video-Calls
+- Kleines Regal für Bücher und Notizblöcke
+
+Hab einige Schreibtische verglichen: FlexiSpot E7 scheint das beste Preis-Leistungs-Verhältnis zu haben. Thomas hat genau dieses Modell und ist happy.
+
+Muss noch mit Jan absprechen ob wir das Budget teilen können – er braucht auch einen neuen Monitor.`
+  };
+
+  // ── Notiztypen laden ─────────────────────────────────
+  async function ladeNotiztypen() {
+    try {
+      const r = await fetch("/notiztypen");
+      const typen = await r.json();
+      const grid = document.getElementById("typ-grid");
+      grid.innerHTML = "";
+
+      Object.entries(typen).forEach(([key, val]) => {
+        const btn = document.createElement("button");
+        btn.className = "typ-btn" + (key === aktiverTyp ? " active" : "");
+        btn.dataset.typ = key;
+        btn.innerHTML = `<span class="typ-icon">${val.icon}</span><span>${val.label}</span>`;
+        btn.onclick = () => typWechseln(key);
+        grid.appendChild(btn);
+      });
+    } catch (e) {
+      console.error("Fehler beim Laden der Notiztypen:", e);
+    }
+  }
+
+  function typWechseln(typ) {
+    aktiverTyp = typ;
+    document.querySelectorAll(".typ-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.typ === typ);
+    });
+  }
+
+  ladeNotiztypen();
+
+  // ── Beispiel laden ───────────────────────────────────
+  function beispielLaden() {
+    document.getElementById("notizen").value = BEISPIELE[aktiverTyp] || BEISPIELE["allgemein"];
+  }
+
+  // ── Vorschau erstellen ───────────────────────────────
+  async function vorschauErstellen() {
+    const notizen = document.getElementById("notizen").value.trim();
+    if (!notizen) { toast("Bitte zuerst Notizen eingeben."); return; }
+
+    const btn     = document.getElementById("btn-vorschau");
+    const spinner = document.getElementById("spinner-vorschau");
+    btn.disabled = true;
+    spinner.style.display = "block";
+
+    try {
+      const r = await fetch("/verarbeiten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notizen, notiz_typ: aktiverTyp, model: document.getElementById("model").value })
+      });
+      const d = await r.json();
+
+      if (d.fehler) { toast("Fehler: " + d.fehler); return; }
+
+      letztesDaten = d;
+      renderVorschau(d);
+      document.getElementById("btn-pdf").disabled = false;
+    } catch (e) {
+      toast("Verbindungsfehler: " + e.message);
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = "none";
+    }
+  }
+
+  // ── Vorschau rendern ─────────────────────────────────
+  function renderVorschau(d) {
+    const v = document.getElementById("vorschau");
+    v.className = "filled";
+
+    const meta = [d.datum, ...(d.meta || [])].filter(Boolean).join("  ·  ");
+
+    let html = `<div class="pv-title">${esc(d.titel || "Notiz")}</div>`;
+    if (meta) html += `<div class="pv-meta">${esc(meta)}</div>`;
+
+    if (d.zusammenfassung) {
+      html += `<div class="pv-box">${esc(d.zusammenfassung)}</div>`;
+    }
+
+    for (const sek of (d.sektionen || [])) {
+      if (sek.punkte?.length) {
+        html += `<div class="pv-section"><h3>${esc(sek.icon || "●")} ${esc(sek.titel)}</h3>
+          ${sek.punkte.map(p => `<div class="pv-item"><span>${esc(p)}</span></div>`).join("")}
+        </div>`;
+      }
+    }
+
+    if (d.aktionspunkte?.length) {
+      html += `<div class="pv-section"><h3>✓ Aktionspunkte</h3>
+        <table class="ap-table">
+          <thead><tr><th>Aufgabe</th><th>Verantwortlich</th><th>Frist</th></tr></thead>
+          <tbody>
+            ${d.aktionspunkte.map(a =>
+              `<tr><td>${esc(a.aufgabe)}</td><td>${esc(a.verantwortlich||"TBD")}</td><td>${esc(a.frist||"TBD")}</td></tr>`
+            ).join("")}
+          </tbody>
+        </table></div>`;
+    }
+
+    v.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // ── PDF herunterladen ────────────────────────────────
+  async function pdfErstellen() {
+    const notizen = document.getElementById("notizen").value.trim();
+    if (!notizen) return;
+
+    const btn     = document.getElementById("btn-pdf");
+    const spinner = document.getElementById("spinner-pdf");
+    btn.disabled = true;
+    spinner.style.display = "block";
+
+    try {
+      const r = await fetch("/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notizen, notiz_typ: aktiverTyp, model: document.getElementById("model").value })
+      });
+
+      if (!r.ok) {
+        const err = await r.json();
+        toast("Fehler: " + err.fehler);
+        return;
+      }
+
+      const cd = r.headers.get("Content-Disposition") || "";
+      const match = cd.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : "notiz.pdf";
+
+      const blob = await r.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast("✅ PDF heruntergeladen!");
+    } catch (e) {
+      toast("Verbindungsfehler: " + e.message);
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = "none";
+    }
+  }
+
+  // ── Toast ────────────────────────────────────────────
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3500);
+  }
+
+  // Ctrl/Cmd+Enter startet Aufbereitung
+  document.getElementById("notizen").addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) vorschauErstellen();
+  });
+</script>
+</body>
+</html>

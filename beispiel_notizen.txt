@@ -1,0 +1,26 @@
+Projektmeeting Website-Relaunch
+28. Juni 2026, 10:00 Uhr, Zoom
+
+Teilnehmer: Nataliia, Thomas (Design), Sarah (Entwicklung), Marc (Marketing)
+
+Wir haben den aktuellen Stand des Website-Relaunches besprochen.
+Thomas hat neue Mockups vorgestellt – alle waren begeistert vom neuen Design.
+Sarah berichtete, dass das CMS-Setup fertig ist, aber noch Tests fehlen.
+Marc will bis nächste Woche die neuen Texte liefern.
+
+Beschlossen wurde:
+- Das neue Design wird so umgesetzt wie in den Mockups gezeigt
+- Go-Live Termin ist der 15. Juli 2026
+- Budget für Stockfotos wird auf 500 Euro festgelegt
+
+Aufgaben:
+- Nataliia: Abstimmung mit Kunden bis 2. Juli
+- Thomas: Finale Design-Assets bis 5. Juli
+- Sarah: Performance-Tests durchführen bis 10. Juli
+- Marc: Alle Texte bis 30. Juni liefern
+
+Offene Punkte:
+- SEO-Strategie noch nicht besprochen, nächstes Meeting klären
+- Hosting-Anbieter noch nicht final entschieden
+
+Nächstes Meeting: 5. Juli 2026, 10 Uhr
