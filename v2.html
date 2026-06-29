@@ -63,6 +63,15 @@
     .hero-photo {
       position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
       height: 105%; width: auto; max-width: none;
+      filter: drop-shadow(-18px 0px 28px rgba(0,0,0,0.55))
+              drop-shadow(0px -8px 24px rgba(0,0,0,0.35));
+    }
+    /* Radial glow behind figure */
+    .hero-photo-shadow {
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 90%; height: 80%; z-index: 0;
+      background: radial-gradient(ellipse 60% 70% at 50% 85%, rgba(30,55,85,0.7) 0%, transparent 70%);
+      pointer-events: none;
     }
     /* Bottom fade + left shimmer */
     .hero-photo-panel::before {
@@ -217,6 +226,7 @@
     </div>
   </div>
   <div class="hero-photo-panel">
+    <div class="hero-photo-shadow"></div>
     <img class="hero-photo" src="/Foto-nobg.png" alt="Nataliia Bieliaieva">
   </div>
 </section>
